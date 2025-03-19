@@ -1,5 +1,10 @@
 # Made by Skids, for Skids
 
+
+i skidded this whole thing, make sure to skid while using it
+only for best skids
+
+
 How to use
 
 figure it out
