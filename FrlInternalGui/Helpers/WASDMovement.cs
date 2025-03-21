@@ -1,7 +1,7 @@
 ﻿using BepInEx;
+using GorillaLocomotion;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Player = GorillaLocomotion.Player;
 
 [BepInPlugin("frl.internal.cool.wasd", "frlwasd", "1.0.0")]
 public class WASDMovement : BaseUnityPlugin
@@ -9,49 +9,74 @@ public class WASDMovement : BaseUnityPlugin
     private const float MoveSpeed = 10f;
     private const float RotationSpeed = 0.5f;
     private const float Gravity = 9.81f;
-
     private Camera playerCamera;
     private Rigidbody playerRb;
-
     private float yaw;
     private float pitch;
-
     private const float MinPitch = -80f;
     private const float MaxPitch = 80f;
 
     void Start()
     {
         playerCamera = Camera.main;
-        playerRb = Player.Instance.GetComponent<Rigidbody>();
+        playerRb = GTPlayer.Instance.GetComponent<Rigidbody>();
+        if (playerRb == null)
+            playerRb = GTPlayer.Instance.AddComponent<Rigidbody>();
 
-        Vector3 angles = playerCamera.transform.localEulerAngles;
-
+        Vector3 angles = playerCamera.transform.eulerAngles;
         pitch = angles.x > 180 ? angles.x - 360 : angles.x;
         yaw = angles.y;
     }
 
     void Update()
     {
-        Transform playerTransform = Player.Instance.transform;
+        Transform playerTransform = GTPlayer.Instance.transform;
+        if (playerRb == null)
+        {
+            playerRb = GTPlayer.Instance.GetComponent<Rigidbody>();
+            playerRb.velocity = Vector3.zero;
+        }
 
-        Transform bodyColliderTransform = Player.Instance.bodyCollider.transform;
+        HandleCameraRotation();
 
         if (!UnityInput.Current.GetKey(KeyCode.Space))
             playerRb.velocity += Vector3.down * Gravity * Time.deltaTime;
+        else
+            playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
+
+        Vector3 forward = playerCamera.transform.forward;
+        forward.y = 0;
+        forward.Normalize();
+
+        Vector3 right = playerCamera.transform.right;
+        right.y = 0;
+        right.Normalize();
+
+        Vector3 moveDirection = Vector3.zero;
+
+        if (UnityInput.Current.GetKey(KeyCode.W))
+            moveDirection += forward;
+        if (UnityInput.Current.GetKey(KeyCode.S))
+            moveDirection -= forward;
+        if (UnityInput.Current.GetKey(KeyCode.A))
+            moveDirection -= right;
+        if (UnityInput.Current.GetKey(KeyCode.D))
+            moveDirection += right;
 
         if (UnityInput.Current.GetKey(KeyCode.Space))
-            playerTransform.position += bodyColliderTransform.up * Time.deltaTime * MoveSpeed;
+            moveDirection += Vector3.up;
         if (UnityInput.Current.GetKey(KeyCode.LeftShift))
-            playerTransform.position -= bodyColliderTransform.up * Time.deltaTime * MoveSpeed;
-        if (UnityInput.Current.GetKey(KeyCode.W))
-            playerTransform.position += bodyColliderTransform.forward * Time.deltaTime * MoveSpeed;
-        if (UnityInput.Current.GetKey(KeyCode.S))
-            playerTransform.position -= bodyColliderTransform.forward * Time.deltaTime * MoveSpeed;
-        if (UnityInput.Current.GetKey(KeyCode.A))
-            playerTransform.position -= bodyColliderTransform.right * Time.deltaTime * MoveSpeed;
-        if (UnityInput.Current.GetKey(KeyCode.D))
-            playerTransform.position += bodyColliderTransform.right * Time.deltaTime * MoveSpeed;
+            moveDirection -= Vector3.up;
 
+        if (moveDirection.magnitude > 0)
+        {
+            moveDirection.Normalize();
+            playerTransform.position += moveDirection * Time.deltaTime * MoveSpeed;
+        }
+    }
+
+    private void HandleCameraRotation()
+    {
         if (Mouse.current != null && Mouse.current.rightButton.isPressed)
         {
             Vector2 mouseDelta = Mouse.current.delta.ReadValue();
@@ -64,8 +89,14 @@ public class WASDMovement : BaseUnityPlugin
                 yaw -= 360f;
             if (yaw < -180f)
                 yaw += 360f;
-
-            playerCamera.transform.localRotation = Quaternion.Euler(pitch, yaw, 0f);
         }
+
+        if (playerCamera == null)
+        {
+            playerCamera = Camera.main;
+        }
+
+
+        playerCamera.transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
     }
 }

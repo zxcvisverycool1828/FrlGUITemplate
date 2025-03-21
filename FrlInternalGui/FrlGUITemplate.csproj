@@ -7,10 +7,6 @@
 	  <LangVersion>12.0</LangVersion>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Helpers\WASDMovement.cs" />
-  </ItemGroup>
-
 
 
 	
